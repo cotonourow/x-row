@@ -1,0 +1,21 @@
+### REGISTER
+POST http://127.0.0.1:8000/contacts/register/
+Content-Type: application/json
+
+{
+    "username": "jason",
+    "password": "password123"
+}
+
+### LOGIN (Get JWT Token)
+POST http://127.0.0.1:8000/api/token/
+Content-Type: application/json
+
+{
+    "username": "jason",
+    "password": "password123"
+}
+
+### CONTACT LIST
+GET http://127.0.0.1:8000/contacts/list/
+Authorization: Bearer YOUR_TOKEN_HERE

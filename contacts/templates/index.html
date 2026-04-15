@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phone Database</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f5f5f5; 
+            padding-top: 140px; 
+        }
+        
+        /* STICKY HEADER */
+        .sticky-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #f5f5f5;
+            padding: 15px 20px;
+            border-bottom: 3px solid #3498db;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 10000;
+        }
+        
+        .controls-row {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+        
+        select {
+            padding: 10px 15px;
+            border: 2px solid #3498db;
+            border-radius: 6px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            min-width: 100px;
+            font-weight: 600;
+        }
+        
+        .search-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .search-group input {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .btn-clear { background: #e74c3c; }
+        
+        .stats-bar {
+            background: white;
+            padding: 10px 20px;
+            margin: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px 100px 20px;
+        }
+        
+        .table-wrapper {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        table { width: 100%; border-collapse: collapse; }
+        
+        th {
+            background: #34495e;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+        
+        td { padding: 12px 15px; border-bottom: 1px solid #ecf0f1; }
+        tr:hover { background: #f8f9fa; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        
+        /* STICKY PAGINATION */
+        .pagination-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 15px;
+            border-top: 3px solid #3498db;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.2);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .pagination-btn {
+            padding: 12px 25px;
+            border: 2px solid #3498db;
+            background: white;
+            color: #3498db;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .pagination-btn:hover:not(:disabled) {
+            background: #3498db;
+            color: white;
+        }
+        
+        .pagination-btn:disabled {
+            border-color: #bdc3c7;
+            color: #95a5a6;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .page-info {
+            font-weight: 700;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+        
+        .loading { text-align: center; padding: 60px; color: #7f8c8d; }
+        .error { background: #e74c3c; color: white; padding: 20px; margin: 20px; border-radius: 8px; }
+        
+        .copy-btn {
+            padding: 8px 16px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <!-- STICKY HEADER -->
+    <div class="sticky-header">
+        <h1>📞 Phone Database</h1>
+        <div class="controls-row">
+            <div>
+                <label style="font-size: 12px; font-weight: bold; color: #555;">Phone Prefix</label>
+                <select id="dbSelect" onchange="loadData()">
+                    <option value="070">070</option>
+                    <option value="080">080</option>
+                    <option value="081">081</option>
+                    <option value="090">090</option>
+                    <option value="091">091</option>
+                </select>
+            </div>
+            
+            <div class="search-group">
+                <label style="font-size: 12px; font-weight: bold; color: #555;">Search Number</label>
+                <input type="text" id="searchInput" placeholder="Type phone number..." onkeypress="if(event.key==='Enter')loadData()">
+            </div>
+            
+            <button class="btn" onclick="loadData()">🔍 Search</button>
+            <button class="btn btn-clear" onclick="clearSearch()">❌ Clear</button>
+        </div>
+    </div>
+    
+    <!-- Stats -->
+    <div class="stats-bar">
+        <div>Prefix: <strong id="currentDb">070</strong></div>
+        <div>Total: <strong id="totalCount">0</strong></div>
+        <div>Showing: <strong id="showingCount">0</strong></div>
+        <div>Page: <strong id="pageDisplay">1</strong></div>
+    </div>
+    
+    <!-- Table -->
+    <div class="container">
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">#</th>
+                        <th>Phone Number</th>
+                        <th style="width: 100px;">Copy</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="3" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- STICKY PAGINATION -->
+    <div class="pagination-container">
+        <button class="pagination-btn" id="prevBtn" onclick="goToPage(-1)" disabled>← Previous</button>
+        <div class="page-info">Page <span id="currentPage">1</span> of <span id="totalPages">1</span></div>
+        <button class="pagination-btn" id="nextBtn" onclick="goToPage(1)" disabled>Next →</button>
+    </div>
+    
+    <script>
+        let state = { db: '070', query: '', page: 1, perPage: 1000, total: 0, hasMore: false, data: [] };
+        
+        async function loadData() {
+            state.db = document.getElementById('dbSelect').value;
+            state.query = document.getElementById('searchInput').value.trim();
+            state.page = 1;
+            await fetchData();
+        }
+        
+        async function fetchData() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '<tr><td colspan="3" class="loading">Loading...</td></tr>';
+            
+            try {
+                const url = `http://127.0.0.1:8000/contacts/search/?db=${state.db}&q=${encodeURIComponent(state.query)}&page=${state.page}&per_page=${state.perPage}`;
+                const response = await fetch(url);
+                const result = await response.json();
+                
+                if (result.error) throw new Error(result.error);
+                
+                state.data = result.results || [];
+                state.total = result.total || 0;
+                state.hasMore = result.has_more || false;
+                
+                updateTable();
+                updateStats();
+                updatePagination();
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="3" class="error">Error: ${error.message}</tr>`;
+            }
+        }
+        
+        function updateTable() {
+            const tbody = document.getElementById('tableBody');
+            const startIndex = (state.page - 1) * state.perPage;
+            
+            if (state.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="loading">No results found</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = state.data.map((item, index) => {
+                const phone = item.phone || item;
+                const rowNum = startIndex + index + 1;
+                return `<tr>
+                    <td>${rowNum}</td>
+                    <td style="font-size: 16px; font-weight: 600;">${phone}</td>
+                    <td><button class="copy-btn" onclick="copyPhone('${phone}')">📋 Copy</button></td>
+                </tr>`;
+            }).join('');
+        }
+        
+        function updateStats() {
+            document.getElementById('currentDb').textContent = state.db;
+            document.getElementById('totalCount').textContent = state.total.toLocaleString();
+            document.getElementById('showingCount').textContent = state.data.length;
+            document.getElementById('pageDisplay').textContent = state.page;
+        }
+        
+        function updatePagination() {
+            const totalPages = Math.ceil(state.total / state.perPage) || 1;
+            document.getElementById('currentPage').textContent = state.page;
+            document.getElementById('totalPages').textContent = totalPages.toLocaleString();
+            document.getElementById('prevBtn').disabled = state.page <= 1;
+            document.getElementById('nextBtn').disabled = !state.hasMore;
+        }
+        
+        async function goToPage(direction) {
+            const newPage = state.page + direction;
+            if (newPage < 1) return;
+            if (direction > 0 && !state.hasMore) return;
+            
+            state.page = newPage;
+            await fetchData();
+            window.scrollTo({ top: 150, behavior: 'smooth' });
+        }
+        
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            loadData();
+        }
+        
+        function copyPhone(phone) {
+            navigator.clipboard.writeText(phone).then(() => {
+                const btn = event.target;
+                btn.textContent = '✅ Copied!';
+                setTimeout(() => btn.textContent = '📋 Copy', 1500);
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => loadData());
+    </script>
+</body>
+</html>

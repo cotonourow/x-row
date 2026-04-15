@@ -1,0 +1,29 @@
+{% extends "admin/change_list.html" %}
+
+{% block content %}
+
+<div style="position: sticky; top: 0; background: white; padding: 10px; z-index: 1000; border-bottom: 1px solid #ccc;">
+    <form method="get">
+        
+        {# Preserve existing query parameters #}
+        {% for key, value in request.GET.items %}
+            {% if key != "db_choice" %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endif %}
+        {% endfor %}
+
+        <label><strong>Select DB:</strong></label>
+
+        <select name="db_choice" onchange="this.form.submit()">
+            {% for code, name in db_choices %}
+                <option value="{{ code }}" {% if code == current_db %}selected{% endif %}>
+                    {{ name }}
+                </option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+{{ block.super }}
+
+{% endblock %}
