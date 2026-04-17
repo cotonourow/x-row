@@ -9,3 +9,5 @@ PyJWT==2.11.0
 sqlparse==0.5.5
 tqdm==4.67.3
 tzdata==2025.3
+dj-database-url==2.1.0
+gunicorn==22.0.0
