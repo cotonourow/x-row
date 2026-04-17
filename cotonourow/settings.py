@@ -1,17 +1,19 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ==================== SECURITY ====================
-SECRET_KEY = 'django-insecure-CHANGE_THIS_IN_PRODUCTION'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-secret-key')
 
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = [
     '127.0.0.1',
-    'localhost'
+    'localhost',
+    '.onrender.com',
 ]
 
 # ==================== APPS ====================
@@ -41,7 +43,6 @@ MIDDLEWARE = [
 
     'django.middleware.common.CommonMiddleware',
 
-    # ⚠️ CSRF stays for now (safe)
     'django.middleware.csrf.CsrfViewMiddleware',
 
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -77,14 +78,10 @@ WSGI_APPLICATION = 'cotonourow.wsgi.application'
 
 # ==================== DATABASE ====================
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'contacts_070',
-        'USER': 'x-row',
-        'PASSWORD': 'changeMOD123',
-        'HOST': '127.0.0.1',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600
+    )
 }
 
 DATABASE_ROUTERS = ['cotonourow.db_router.PrefixRouter']
@@ -103,9 +100,7 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-
     'AUTH_HEADER_TYPES': ('Bearer',),
-
     'SIGNING_KEY': SECRET_KEY,
 }
 
@@ -128,6 +123,8 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # ==================== DEFAULT ====================
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
