@@ -387,7 +387,7 @@ def get_subscription_status(request):
 @permission_classes([AllowAny])
 def request_password_reset(request):
     """
-    OPTION B: Display reset link directly on screen (no email needed)
+    SECURE VERSION: Send reset link via Gmail, do NOT display on screen
     """
     email = request.data.get("email", "").strip()
     if not email:
@@ -398,43 +398,36 @@ def request_password_reset(request):
         user = User.objects.get(email=email)
         user_found = True
     except User.DoesNotExist:
-        # User not found — don't reveal this, generate dummy token for security
+        # User not found — don't reveal this for security
         user_found = False
         user = None
 
-    # Generate token and uid (works for both real and dummy users)
+    # Generate token and uid only if user exists
     if user_found:
         token = PasswordResetTokenGenerator().make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
-    else:
-        # For non-existent emails, create a dummy token
-        token = PasswordResetTokenGenerator().make_token(User())
-        uid = urlsafe_base64_encode(force_bytes("0"))
+        reset_url = f"https://cotonourow.com/reset-password?uid={uid}&token={token}"
 
-    reset_url = f"https://cotonourow.com/reset-password?uid={uid}&token={token}"
-
-    # Try to send email if user exists (will fail silently if email not configured)
-    if user_found:
+        # Send email via Gmail
         try:
             send_mail(
                 subject="Password Reset - Cotonourow",
                 message=f"Click this link to reset your password:\n\n{reset_url}\n\nIf you didn't request this, ignore this email.",
                 from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@cotonourow.com'),
                 recipient_list=[email],
-                fail_silently=True,
+                fail_silently=False,  # Raise exceptions so we know if it fails
             )
-        except Exception:
-            pass
-
-    # OPTION B: Always return the reset_url so users can click it directly
+        except Exception as e:
+            # Email failed to send
+            return Response({
+                "success": False,
+                "message": "Unable to send email. Please try again later."
+            }, status=500)
+    
+    # SECURE: Always return same message whether email exists or not (prevents email enumeration)
     return Response({
         "success": True,
-        "message": "If this email exists, a reset link has been sent.",
-        "data": {
-            "reset_url": reset_url,
-            "uid": uid,
-            "token": token
-        }
+        "message": "If this email exists in our system, a reset link has been sent. Please check your inbox."
     })
 
 
