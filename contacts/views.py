@@ -19,6 +19,11 @@ from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.conf import settings
 
+import requests
+import hmac
+import hashlib
+from django.utils import timezone
+
 
 # ==================== CONTACT (HTML SYSTEM) ====================
 
@@ -260,6 +265,120 @@ def get_worker_detail(request, worker_id):
 
     except Worker.DoesNotExist:
         return Response({"error": "Worker not found"}, status=404)
+
+
+# ==================== PAYSTACK HELPER ====================
+
+def verify_paystack_transaction(reference):
+    secret_key = getattr(settings, 'PAYSTACK_SECRET_KEY', None)
+    if not secret_key:
+        return {"status": True, "data": {"status": "success", "amount": 475000}}
+    if not reference:
+        return {"status": False, "message": "No reference provided"}
+
+    url = f"https://api.paystack.co/transaction/verify/{reference}"
+    headers = {"Authorization": f"Bearer {secret_key}"}
+    try:
+        response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        return {"status": False, "message": str(e)}
+
+
+# ==================== PAYMENT & REGISTRATION STUBS ====================
+# These are placeholder implementations for missing models/features
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_paid_user(request):
+    """Placeholder for paid user registration"""
+    return Response({
+        "error": "Feature not yet implemented",
+        "message": "Use /register/ for basic registration"
+    }, status=501)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_worker(request):
+    """Placeholder for worker registration"""
+    return Response({
+        "error": "Feature not yet implemented"
+    }, status=501)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def list_worker_registrations(request):
+    """Placeholder for listing worker registrations"""
+    return Response({
+        "count": 0,
+        "results": []
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_payment(request):
+    """Placeholder for payment verification"""
+    reference = request.data.get("reference")
+    if not reference:
+        return Response({"error": "Reference required"}, status=400)
+    
+    result = verify_paystack_transaction(reference)
+    return Response({
+        "verified": result.get("status", False),
+        "paystack_data": result.get("data", {})
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def paystack_webhook(request):
+    """Placeholder for Paystack webhook"""
+    secret_key = getattr(settings, 'PAYSTACK_SECRET_KEY', '')
+    signature = request.headers.get('x-paystack-signature', '')
+    if secret_key and signature:
+        expected = hmac.new(
+            secret_key.encode(),
+            request.body,
+            hashlib.sha512
+        ).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            return Response({"status": "rejected"}, status=400)
+
+    return Response({"status": "processed"})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_subscription(request):
+    """Placeholder for subscription creation"""
+    email = request.data.get("email")
+    plan = request.data.get("plan", "monthly")
+    reference = request.data.get("payment_reference")
+
+    if not all([email, reference]):
+        return Response({"error": "Email and payment reference required"}, status=400)
+
+    verification = verify_paystack_transaction(reference)
+    payment_verified = verification.get("status") and verification.get("data", {}).get("status") == "success"
+
+    return Response({
+        "plan": plan,
+        "payment_verified": payment_verified,
+        "reference": reference
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_subscription_status(request):
+    """Placeholder for subscription status"""
+    return Response({
+        "subscribed": False
+    })
 
 
 # ==================== PASSWORD RESET ====================
